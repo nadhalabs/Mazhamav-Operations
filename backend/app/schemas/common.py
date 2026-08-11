@@ -35,6 +35,7 @@ class UserCreate(BaseModel):
     email: EmailStr | None = None
     password: str = Field(min_length=8, max_length=128)
     role: UserRole = UserRole.staff
+    active: bool = True
 
     @field_validator("phone")
     @classmethod

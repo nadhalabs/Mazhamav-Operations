@@ -106,10 +106,10 @@ Never edit or delete posted stock movements as part of rollback.
 
 ## Test evidence
 
-- Backend: 45 tests passing, including auth, authorization, constraints, ledger operations, stock requests, sales transactions, deterministic full-system reconciliation, business-timezone boundaries, dashboard metrics, CSV reports, QR upload/access, manual payment receipt and login rate limiting.
+- Backend: 52 tests passing, including auth, owner-only staff management, direct password reset/deactivation, authorization, constraints, ledger operations, stock requests, sales transactions, deterministic full-system reconciliation, business-timezone boundaries, dashboard/staff metrics, CSV reports, QR upload/access, manual payment receipt and login rate limiting.
 - Python bytecode compilation and installed-package consistency (`pip check`): passing.
 - Frontend ESLint and standalone TypeScript checks: passing.
-- Frontend regression tests: 2 passing.
+- Frontend regression tests: 4 passing, including staff directory filtering and payment QR failure handling.
 - Next.js production build with TypeScript validation: passing on Next.js 16.3.0.
 - Production npm dependency audit: 0 known vulnerabilities.
 

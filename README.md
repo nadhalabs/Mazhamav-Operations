@@ -44,6 +44,7 @@ All identifiers are UUIDs. Foreign keys use `RESTRICT` to retain audit history.
 - Owner analytics: `GET /api/v1/dashboard/owner` with `today`, `last_7_days`, `last_30_days`, `this_month`, or bounded custom ranges.
 - Owner CSV reports: `GET /api/v1/reports/{report}.csv` for sales, staff sales, product sales, retailer sales, inventory movements, stock requests, and pending payments.
 - Payment settings: owner-only `GET|POST /api/v1/payments/settings`; authenticated `GET /api/v1/payments/qr-context` and `/qr-image`; staff-only `POST /api/v1/payments/sales/{sale_id}/received` for an audited manual receipt.
+- Owner staff management: `GET /api/v1/admin/staff`, `GET /api/v1/admin/staff/{id}`, `PATCH /api/v1/admin/users/{id}`, and `POST /api/v1/admin/users/{id}/password`. Existing `POST /api/v1/admin/users` creates immediately usable staff/manager accounts.
 
 Authentication uses a signed, expiring JWT stored in an HttpOnly cookie. The frontend proxies `/api` through Next.js so the cookie remains first-party on Vercel. Backend role dependencies are authoritative; route hiding is only a UX layer.
 
@@ -71,10 +72,12 @@ Every posting records `created_by` and `created_at`. The service rejects any ope
 - `/admin`: owner-only operational dashboard with source-backed KPIs, daily sales trend, product/staff performance, stock risks, retailer insights, payments, and CSV exports. Managers continue to `/admin/inventory`.
 - `/admin/settings/payments`: owner-only central payment name, UPI/account reference, QR upload and activation settings.
 - `/staff/payment-qr`: responsive payment display, optionally scoped to a sale, with an explicit audited “mark received” action and no automatic payment claim.
+- `/admin/staff`: owner-only searchable staff/manager directory with creation, editing, activation and direct password reset.
+- `/admin/staff/{id}`: ledger-derived stock plus sales, product, retailer, payment and stock-request performance for the selected business-date range.
 
 ## Tests
 
-Run `.venv/bin/pytest` from `backend/`. The 45-test suite covers authentication, authorization, ledger integrity, transactional sales and requests, dashboard/report reconciliation, QR access/upload validation, manual receipt auditing, login rate limiting, a deterministic V1 working day, and the India/UTC date boundary. From `frontend/`, run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
+Run `.venv/bin/pytest` from `backend/`. The 52-test suite additionally covers staff/manager creation, immediate login, Argon2 password replacement, disable/re-enable behavior, owner-only management, performance aggregation and stock reconciliation. From `frontend/`, run `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
 
 ## Phase 2 migration
 
