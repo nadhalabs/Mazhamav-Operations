@@ -1,0 +1,3 @@
+import {cookies} from "next/headers";import{redirect}from"next/navigation";import{AppShell}from"@/components/app-shell";import{RecordSaleForm}from"@/components/record-sale-form";import{getCurrentUser,serverGet}from"@/lib/api";
+type Options={products:{id:string;name:string;sku:string;unit_name:string;selling_price:string;available:string}[];retailers:{id:string;shop_name:string;area?:string;district?:string}[]};
+export default async function Page(){const cookie=(await cookies()).toString();const user=await getCurrentUser(cookie);if(!user)redirect("/login");if(user.role!=="staff")redirect("/admin");const options=await serverGet<Options>("/sales/options",cookie);return <AppShell user={user} title="Record sale"><RecordSaleForm {...options}/></AppShell>}

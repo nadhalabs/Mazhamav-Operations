@@ -1,0 +1,3 @@
+import { LoginForm } from "@/components/login-form";
+export default function LoginPage() { return <main className="flex min-h-screen items-center justify-center p-5"><section className="w-full max-w-md rounded-3xl border border-leaf-600/10 bg-white p-7 shadow-xl shadow-leaf-900/5 sm:p-10"><div className="mb-8"><div className="mb-4 inline-flex rounded-full bg-leaf-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-leaf-700">Operations</div><h1 className="text-3xl font-bold tracking-tight text-leaf-900">Mazha Mav</h1><p className="mt-2 text-slate-500">Sign in to manage daily operations.</p></div><LoginForm /></section></main>; }
+

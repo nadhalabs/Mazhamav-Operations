@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+backend/media/
+
+.env.*
+!.env.example
+.DS_Store
+coverage/
+htmlcov/
+*.tsbuildinfo

@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mazhamav
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes: ["mazhamav_db:/var/lib/postgresql/data"]
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    ports: ["8000:8000"]
+    depends_on: [db]
+volumes:
+  mazhamav_db:
+
