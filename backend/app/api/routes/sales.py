@@ -1,12 +1,12 @@
 import uuid
 from datetime import date
 from decimal import Decimal
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from app.api.dependencies import current_user, staff_only
 from app.database import get_db
-from app.models import PaymentStatus, Product, Retailer, Sale, SaleItem, User, UserRole
+from app.models import PaymentMethod, PaymentStatus, Product, Retailer, Sale, SaleItem, User, UserRole
 from app.schemas import SaleCreate, SaleListRow, SaleOut, StaffHomeOut
 from app.services.inventory import stock_totals
 from app.services.sales import create_sale
@@ -34,7 +34,7 @@ def _sale_rows(db: Session, stmt):
 
 
 @router.get("", response_model=list[SaleListRow])
-def sale_history(date_from: date | None = None, date_to: date | None = None, staff_id: uuid.UUID | None = None, retailer_id: uuid.UUID | None = None, product_id: uuid.UUID | None = None, payment_status: PaymentStatus | None = None, limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0), actor: User = Depends(current_user), db: Session = Depends(get_db)):
+def sale_history(date_from: date | None = None, date_to: date | None = None, staff_id: uuid.UUID | None = None, retailer_id: uuid.UUID | None = None, product_id: uuid.UUID | None = None, payment_status: PaymentStatus | None = None, payment_method: PaymentMethod | None = None, q: str | None = Query(default=None, max_length=100), limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0), actor: User = Depends(current_user), db: Session = Depends(get_db)):
     stmt = select(Sale).order_by(Sale.created_at.desc())
     if actor.role == UserRole.staff: stmt = stmt.where(Sale.staff_id == actor.id)
     elif staff_id: stmt = stmt.where(Sale.staff_id == staff_id)
@@ -42,6 +42,8 @@ def sale_history(date_from: date | None = None, date_to: date | None = None, sta
     if date_to: stmt = stmt.where(Sale.sale_date <= date_to)
     if retailer_id: stmt = stmt.where(Sale.retailer_id == retailer_id)
     if payment_status: stmt = stmt.where(Sale.payment_status == payment_status)
+    if payment_method: stmt = stmt.where(Sale.payment_method == payment_method)
+    if q: stmt = stmt.join(Retailer).where((Sale.sale_number.ilike(f"%{q}%")) | (Retailer.shop_name.ilike(f"%{q}%")))
     if product_id: stmt = stmt.join(SaleItem).where(SaleItem.product_id == product_id)
     return _sale_rows(db, stmt.offset(offset).limit(limit))
 
@@ -55,3 +57,11 @@ def staff_home(actor: User = Depends(staff_only), db: Session = Depends(get_db))
     current_stock = sum((v["issued"] - v["sold"] - v["returned"] + v["adjustments"] for (staff_id, _), v in totals.items() if staff_id == actor.id), Decimal("0"))
     recent = _sale_rows(db, select(Sale).where(Sale.staff_id == actor.id).order_by(Sale.created_at.desc()).limit(5))
     return StaffHomeOut(today_quantity_sold=sum((item.quantity for sale in today_sales for item in sale.items), Decimal("0")), today_sales_value=sum((sale.total for sale in today_sales), Decimal("0.00")), current_total_stock=current_stock, pending_payments_count=len(pending), pending_payments_value=sum((sale.total for sale in pending), Decimal("0.00")), recent_sales=recent)
+
+
+@router.get("/{sale_id}")
+def sale_detail(sale_id: uuid.UUID, actor: User = Depends(current_user), db: Session = Depends(get_db)):
+    sale = db.scalar(select(Sale).where(Sale.id == sale_id))
+    if not sale: raise HTTPException(404, "Sale not found")
+    if actor.role == UserRole.staff and sale.staff_id != actor.id: raise HTTPException(403, "Staff may only view their own sales")
+    return {"id": str(sale.id), "sale_number": sale.sale_number, "sale_date": sale.sale_date, "created_at": sale.created_at, "staff_id": str(sale.staff_id), "staff_name": sale.staff.full_name, "retailer_id": str(sale.retailer_id), "retailer_name": sale.retailer.shop_name, "subtotal": str(sale.subtotal), "total": str(sale.total), "payment_status": sale.payment_status.value, "payment_method": sale.payment_method.value if sale.payment_method else None, "payment_received_by": str(sale.payment_received_by) if sale.payment_received_by else None, "payment_received_at": sale.payment_received_at, "notes": sale.notes, "items": [{"product_id": str(item.product_id), "product": item.product.name, "quantity": str(item.quantity), "unit_price_snapshot": str(item.unit_price_snapshot), "line_total": str(item.line_total)} for item in sale.items]}

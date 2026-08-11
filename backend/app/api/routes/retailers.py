@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import current_user, operations_viewer
 from app.core.config import get_settings
 from app.database import get_db
-from app.models import Retailer, User, UserRole
+from app.models import Retailer, Sale, SaleItem, User, UserRole
+from sqlalchemy import func
 from app.schemas import RetailerIn, RetailerOut, RetailerUpdate
 
 router = APIRouter(prefix="/retailers", tags=["retailers"])
@@ -40,6 +41,18 @@ def update_retailer(retailer_id: uuid.UUID, payload: RetailerUpdate, _: User = D
     for key, value in payload.model_dump(exclude_unset=True).items(): setattr(retailer, key, value)
     db.commit(); db.refresh(retailer)
     return retailer
+
+
+@router.get("/{retailer_id}")
+def retailer_detail(retailer_id: uuid.UUID, _: User = Depends(operations_viewer), db: Session = Depends(get_db)):
+    retailer = db.get(Retailer, retailer_id)
+    if not retailer: raise HTTPException(404, "Retailer not found")
+    value, quantity, last = db.execute(select(func.coalesce(func.sum(Sale.total), 0), func.coalesce(func.sum(SaleItem.quantity), 0), func.max(Sale.sale_date)).outerjoin(SaleItem, SaleItem.sale_id == Sale.id).where(Sale.retailer_id == retailer_id)).one()
+    # Sale totals are aggregated separately to avoid multiplying multi-item sales.
+    value = db.scalar(select(func.coalesce(func.sum(Sale.total), 0)).where(Sale.retailer_id == retailer_id)) or 0
+    staff = db.execute(select(User.id, User.full_name, func.sum(Sale.total)).join(Sale, Sale.staff_id == User.id).where(Sale.retailer_id == retailer_id).group_by(User.id, User.full_name).order_by(func.sum(Sale.total).desc())).all()
+    recent = db.scalars(select(Sale).where(Sale.retailer_id == retailer_id).order_by(Sale.created_at.desc()).limit(20)).all()
+    return {"id": retailer.id, "shop_name": retailer.shop_name, "contact_name": retailer.contact_name, "phone": retailer.phone, "address": retailer.address, "area": retailer.area, "district": retailer.district, "active": retailer.active, "total_purchase_value": str(value), "total_quantity": str(quantity), "last_purchase_date": last, "staff": [{"id": str(uid), "name": name, "sales_value": str(total)} for uid, name, total in staff], "recent_sales": [{"id": str(s.id), "sale_number": s.sale_number, "sale_date": s.sale_date, "total": str(s.total), "payment_status": s.payment_status.value} for s in recent]}
 
 
 @router.delete("/{retailer_id}", status_code=status.HTTP_204_NO_CONTENT)

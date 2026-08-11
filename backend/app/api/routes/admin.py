@@ -88,3 +88,21 @@ def create_product(payload: ProductIn, _: User = Depends(owner_only), db: Sessio
         raise HTTPException(status_code=409, detail="SKU already exists")
     db.refresh(product)
     return product
+
+
+@router.patch("/products/{product_id}", response_model=ProductOut)
+def update_product(product_id: uuid.UUID, payload: ProductIn, _: User = Depends(owner_only), db: Session = Depends(get_db), active: bool | None = None):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(404, "Product not found")
+    for key, value in payload.model_dump().items():
+        setattr(product, key, value)
+    if active is not None:
+        product.active = active
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "SKU already exists")
+    db.refresh(product)
+    return product

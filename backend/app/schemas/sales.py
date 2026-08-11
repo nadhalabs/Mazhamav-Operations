@@ -27,6 +27,7 @@ class RetailerUpdate(BaseModel):
     area: str | None = Field(default=None, max_length=120)
     district: str | None = Field(default=None, max_length=120)
     address: str | None = Field(default=None, max_length=1000)
+    active: bool | None = None
 
     @model_validator(mode="after")
     def shop_name_cannot_be_null(self):
