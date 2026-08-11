@@ -20,7 +20,8 @@ def sale_options(actor: User = Depends(staff_only), db: Session = Depends(get_db
     totals, _ = stock_totals(db)
     products = db.scalars(select(Product).where(Product.active.is_(True)).order_by(Product.name)).all()
     retailers = db.scalars(select(Retailer).where(Retailer.active.is_(True)).order_by(Retailer.shop_name).limit(200)).all()
-    return {"products": [{"id": str(p.id), "name": p.name, "sku": p.sku, "unit_name": p.unit_name, "selling_price": str(p.selling_price), "available": str(totals[(actor.id, p.id)]["issued"] - totals[(actor.id, p.id)]["sold"] - totals[(actor.id, p.id)]["returned"] + totals[(actor.id, p.id)]["adjustments"])} for p in products], "retailers": [{"id": str(r.id), "shop_name": r.shop_name, "area": r.area, "district": r.district, "phone": r.phone} for r in retailers]}
+    locations = {"districts": sorted({r.district for r in retailers if r.district}), "cities": sorted({r.city for r in retailers if r.city}), "areas": sorted({r.area for r in retailers if r.area})}
+    return {"products": [{"id": str(p.id), "name": p.name, "sku": p.sku, "unit_name": p.unit_name, "selling_price": str(p.selling_price), "available": str(totals[(actor.id, p.id)]["issued"] - totals[(actor.id, p.id)]["sold"] - totals[(actor.id, p.id)]["returned"] + totals[(actor.id, p.id)]["adjustments"])} for p in products], "retailers": [{"id": str(r.id), "shop_name": r.shop_name, "area": r.area, "city": r.city, "district": r.district, "phone": r.phone} for r in retailers], "locations": locations}
 
 
 @router.post("", response_model=SaleOut, status_code=status.HTTP_201_CREATED)

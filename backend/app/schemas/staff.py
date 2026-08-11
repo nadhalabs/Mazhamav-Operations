@@ -126,5 +126,6 @@ class StaffDetail(BaseModel):
     stock: list[StaffStockDetail]
     product_performance: list[StaffProductPerformance]
     retailer_activity: list[StaffRetailerActivity]
+    area_performance: list[dict]
     recent_sales: list[StaffRecentSale]
     stock_requests: list[StaffRequestDetail]

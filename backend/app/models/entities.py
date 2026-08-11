@@ -76,6 +76,7 @@ class Retailer(TimestampMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(20))
     address: Mapped[str | None] = mapped_column(Text)
     area: Mapped[str | None] = mapped_column(String(120), index=True)
+    city: Mapped[str | None] = mapped_column(String(120), index=True)
     district: Mapped[str | None] = mapped_column(String(120), index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 

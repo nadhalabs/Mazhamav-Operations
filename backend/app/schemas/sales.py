@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.models import PaymentMethod, PaymentStatus
 
 
@@ -10,8 +10,16 @@ class RetailerIn(BaseModel):
     contact_name: str | None = Field(default=None, max_length=120)
     phone: str | None = Field(default=None, max_length=20)
     area: str | None = Field(default=None, max_length=120)
+    city: str | None = Field(default=None, max_length=120)
     district: str | None = Field(default=None, max_length=120)
     address: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("city", "area", "district", mode="before")
+    @classmethod
+    def normalize_location(cls, value):
+        if value is None: return None
+        normalized = " ".join(str(value).split()).title()
+        return normalized or None
 
 
 class RetailerOut(RetailerIn):
@@ -25,9 +33,17 @@ class RetailerUpdate(BaseModel):
     contact_name: str | None = Field(default=None, max_length=120)
     phone: str | None = Field(default=None, max_length=20)
     area: str | None = Field(default=None, max_length=120)
+    city: str | None = Field(default=None, max_length=120)
     district: str | None = Field(default=None, max_length=120)
     address: str | None = Field(default=None, max_length=1000)
     active: bool | None = None
+
+    @field_validator("city", "area", "district", mode="before")
+    @classmethod
+    def normalize_location(cls, value):
+        if value is None: return None
+        normalized = " ".join(str(value).split()).title()
+        return normalized or None
 
     @model_validator(mode="after")
     def shop_name_cannot_be_null(self):

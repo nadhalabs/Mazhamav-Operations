@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.routes import admin, auth, dashboard, inventory, operations, payments, retailers, sales, stock_requests
+from app.api.routes import admin, areas, auth, dashboard, inventory, operations, payments, retailers, sales, stock_requests
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -45,6 +45,7 @@ def health():
 
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(areas.router, prefix="/api/v1")
 app.include_router(operations.router, prefix="/api/v1")
 app.include_router(inventory.router, prefix="/api/v1")
 app.include_router(retailers.router, prefix="/api/v1")

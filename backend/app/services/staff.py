@@ -70,6 +70,8 @@ def staff_detail(db: Session, staff_id: uuid.UUID, period: str, date_from: date 
     # Sum sale totals in a separate subquery to avoid multiplying multi-item sale values.
     retailer_sales = db.execute(select(Retailer.id, Retailer.shop_name, func.sum(Sale.total), func.max(Sale.sale_date)).join(Sale, Sale.retailer_id == Retailer.id).where(Sale.staff_id == staff_id, Sale.sale_date.between(start, end)).group_by(Retailer.id, Retailer.shop_name).order_by(func.sum(Sale.total).desc())).all()
     retailer_quantity = dict(db.execute(select(Sale.retailer_id, func.sum(SaleItem.quantity)).join(SaleItem, SaleItem.sale_id == Sale.id).where(Sale.staff_id == staff_id, Sale.sale_date.between(start, end)).group_by(Sale.retailer_id)).all())
+    place_value = db.execute(select(Retailer.district, Retailer.city, Retailer.area, func.sum(Sale.total), func.count(func.distinct(Sale.retailer_id)), func.max(Sale.sale_date)).join(Sale, Sale.retailer_id == Retailer.id).where(Sale.staff_id == staff_id, Sale.sale_date.between(start, end)).group_by(Retailer.district, Retailer.city, Retailer.area).order_by(func.sum(Sale.total).desc())).all()
+    place_quantity = {(district, city, area): quantity for district, city, area, quantity in db.execute(select(Retailer.district, Retailer.city, Retailer.area, func.sum(SaleItem.quantity)).join(Sale, Sale.retailer_id == Retailer.id).join(SaleItem, SaleItem.sale_id == Sale.id).where(Sale.staff_id == staff_id, Sale.sale_date.between(start, end)).group_by(Retailer.district, Retailer.city, Retailer.area)).all()}
     recent = db.scalars(select(Sale).options(joinedload(Sale.retailer), selectinload(Sale.items)).where(Sale.staff_id == staff_id).order_by(Sale.created_at.desc()).limit(10)).all()
     requests = db.execute(select(StockRequest, Product.name).join(Product, Product.id == StockRequest.product_id).where(StockRequest.staff_id == staff_id).order_by(StockRequest.requested_at.desc()).limit(20)).all()
     return {
@@ -79,6 +81,7 @@ def staff_detail(db: Session, staff_id: uuid.UUID, period: str, date_from: date 
         "stock": stock,
         "product_performance": [{"product_id": pid, "product": name, "quantity_sold": quantity, "revenue": revenue} for pid, name, quantity, revenue in product_rows],
         "retailer_activity": [{"retailer_id": rid, "retailer": name, "quantity_sold": retailer_quantity.get(rid, ZERO), "sales_value": value, "last_sale_date": last} for rid, name, value, last in retailer_sales],
+        "area_performance": [{"district": district, "city": city, "area": area, "quantity_sold": place_quantity.get((district, city, area), ZERO), "sales_value": value, "retailers_served": served, "last_sale_date": last} for district, city, area, value, served, last in place_value],
         "recent_sales": [{"id": sale.id, "sale_number": sale.sale_number, "retailer": sale.retailer.shop_name, "quantity": sum((item.quantity for item in sale.items), ZERO), "total": sale.total, "payment_status": sale.payment_status, "sale_date": sale.sale_date, "created_at": sale.created_at} for sale in recent],
         "stock_requests": [{"id": request.id, "product": product_name, "requested_quantity": request.requested_quantity, "fulfilled_quantity": request.fulfilled_quantity, "status": request.status, "requested_at": request.requested_at} for request, product_name in requests],
     }
